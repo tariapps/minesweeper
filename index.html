@@ -28,66 +28,6 @@
 
 
 
-<!--
-todo: 
-
-- Explosion Animations – every 5×5 bomb reveal could have a small, quick particle burst.
-
-- ideas:
-	- Power Cells – randomly scattered “bonus” tiles that give special actions when uncovered (extra turn, double points, see opponent’s flag, etc.).
-	- AI Emotion / Bluff Feedback – e.g. AI “taunts” or reacts (subtly or humorously) when you make a smart or risky move.
-	- Puzzle Challenges – static boards with known layouts to solve optimally.
-	- Ranked Ladder or Elo System – for serious players.
-
-- lisää restart game nappiing ominaisuus että se vain tyhjää gameState tiedot ja siten aloittaa heti uuden pelin.
-
-
-- tee mappieditori jossa voi piirtää pelialueen lisäämällä mustia ruutuja johon ei voi pelissä klikata.
-  - lisää myös ominaisuus joka tallentaa oman selaimen muistiin omat mapit uudelleenkäyttöä varten.
-- lisää tallennettuja ennaltaluotuja perusmappeja eri muodoilla.
-
-
-
-- jatka: console.warn(`id:${player.id} ==? peerid:${peer} - quitted: ${player.quitted}`);
-  timed out chat viestit eivät mene läpi mutta kyllä loggaa ne.
- - timeout ei ehkä toimi kunnolla, spämmäsi joskus sitä viestiä. kokeilin korjata player.quitted arvolla ettei yritä poistaa uudestaan.
- 
-- jos hosti quittaa niin ilmoita pelaajille: tee jokin pingi hostia varten myös.
-
-
-- lisää mahdollisuus valita oma väri ennen aloitusta. huom: tsekkaa ettei väri ole jo käytössä.
-- lisää valinta pelin alussa että pelaaja voi valita kumman pommin haluaa.
-  revealBombAirplaneZeros()
-- lisää poistonappi pelaajille. varsinkin ai:lle jos vahingossa laittaa.
-
-
-- korjaa suuntima: peittyy chätin ym alle.
-  - tee canvas pienemmäksi jotenkin. yritin mutta vääntyy kuvasuhde...
-
-- tee lipuista heiluva animaatio rotaatiolla.
-- anna pelaajan valita oman pommin tyyli pelin alussa.
-
-- lisää range näkymä pommille että tietää mihin asti se osuu.
-- tee tekoäly niin että se käy läpi vain merkitsevät ruudut eikä koko mappia jotta se on nopeampi isoilla mapeilla.
-- renderöi webgl:llä nopeuttaakseen renderöintiä.
-- lisää nappi valikkoa varten mistä voi esim katsoa pelihistoriaa ja tallennettuja edellisiä pelejä ja toistaa ne uudestaan. 
-  lisää myös pomminapit ym.
-- lisää nappi pommin käytölle ja pommituksen tyylin valinta ennen peliä. tai sitten myös peliin.
-
-
-- muokkaa warning äänen logiikkaa niin että se varoittaa kun vihollinen tarvitsee voittaakseen enää 6 tai alle miinoja?
-
-
-
-- tee sieniversio missä vältellään tappavan myrkyllisiä sieniä. siinä voisi kävellä metsässä ja kokeilla "kaivaa" jolloin se kertoo kuinka monta myrkkysientä on lähellä. tai sit niin että etitään kaikkia sieniä, mutta pitää osata välttää myrkkysieniä, ja sit puuston ja maaston perusteella voi mennä löytämään tiettyjä sieniä. ja sit pitää tehä ruokaa niistä että jaksaa etsiä lisää sieniä.
-
-
-
-
-
-
-
--->
 <style>
 @font-face {
     font-family: 'Nimbus Sans L';
@@ -2706,7 +2646,7 @@ setInterval(() => {
 		for(let i = 0; i < gameState.players.length; i++){
 			let player = gameState.players[i];
 			if(player.peerId && !player.quitted){
-				if (now - player.lastPing > 3000) { // e.g., 10 seconds timeout
+				if (now - player.lastPing > 30000) { // e.g., 10 seconds timeout
 					console.warn(`Player ${player.id} timed out (interval check)`);
 
 					console.warn("trying to remove player");
@@ -4741,6 +4681,28 @@ function draw_flag(ctx, mapcell, animcell, offsetX, offsetY, x, y, cellSize, sca
 }
 
 
+function minesAroundFound(x,y){
+	let found = 0;
+	let thisTotal = gameState.minemap.map[y][x].type;
+	if(thisTotal > TYPE_EMPTY){
+		for(let yy = -1; yy <= 1; yy++){
+			for(let xx = -1; xx <= 1; xx++){
+				let xp = x+xx;
+				let yp = y+yy;
+				if(xp < 0 || yp < 0) continue;
+				if(xp > gameState.gridSize.x-1 || yp > gameState.gridSize.y-1) continue;
+				if(gameState.minemap.map[yp][xp].visible && gameState.minemap.map[yp][xp].type < TYPE_EMPTY){
+					found++;
+				}
+			}
+		}
+		if(found == thisTotal){
+			return true;
+		}
+	}
+	return false;
+}
+
 
 // render()
 function draw() {
@@ -4864,7 +4826,12 @@ function draw() {
 						let fontSize = baseSize;
 
 						ctx.font = `bold ${fontSize}px Nimbus Sans L`;
-						ctx.fillStyle = numbercolors[mapcell.type];
+						if(minesAroundFound(x,y)){
+							ctx.fillStyle = "rgba(64,64,64,0.5)";
+						}else{
+							ctx.fillStyle = numbercolors[mapcell.type];
+						}
+						//ctx.filter = "grayscale(100%) opacity(50%)";
 						ctx.fillText(
 						  gameState.grid[y][x],
 						  offsetX + x * cellSize + cellSize / 2,
